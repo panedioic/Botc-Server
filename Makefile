@@ -1,0 +1,2 @@
+botc_server: botc.cpp SocketHandler.cpp GameHandler.cpp Player.cpp Game.cpp WebServer.cpp SocketHandler.h GameHandler.h Player.h Game.h WebServer.h
+	@g++ botc.cpp SocketHandler.cpp GameHandler.cpp Player.cpp Game.cpp ./mongoose/mongoose.c WebServer.cpp -I ./ -o ./botcs -lpthread -std=c++11
