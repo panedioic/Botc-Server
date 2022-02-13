@@ -5,6 +5,8 @@
 #include <pthread.h>
 
 #include <./GameHandler.h>
+#include <./SocketHandler.h>
+#include <./WebServer.h>
 #include <./Game.h>
 #include <./Player.h>
 
@@ -20,6 +22,7 @@ GameHandler::GameHandler(){
     }
 }
 
+// deprecated
 int GameHandler::newUser(int fid){
     int i = 0;
     for(i = 0;i < MAX_PLAYERS;i++){
@@ -49,6 +52,7 @@ int GameHandler::newUser(int fid){
     return 0;
 }
 
+// deprecated
 int GameHandler::delUser(int fid){
     int i;
     for(i = 0;i < MAX_PLAYERS;i++){
@@ -64,8 +68,61 @@ int GameHandler::delUser(int fid){
     return 0;
 }
 
-// sendSocket 这玩意本来应该是写在这里的，但要是写在这里的话就必须包含 SocketHandler.h 这个头文件，嫌麻烦，就扔到 SocketHandler.cpp 里去实现了。
-// int GameHandler::sendSocket(int fid, char* data, int len)
+int GameHandler::newConnection(int fid, int type){
+    // find unused uid.
+    int uid;
+    for(uid = 0; uid < MAX_PLAYERS; ++uid){
+        if(playerArray[uid] == NULL){
+            break;
+        }
+    }
+    if(uid == MAX_PLAYERS){
+        return -1;
+    }
+
+    // new player object
+    Player* tmp = new Player(this);
+    playerArray[uid] = tmp;
+    // set uid, fid, type.
+    tmp->uid = uid;
+    tmp->fid = fid;
+    tmp->connectionType = type;
+
+    // notify player to set username.
+    char msgstr[256];
+    sprintf(msgstr, "[Info ] [Server] Welcome to the Blood On The Clocktower server!.\n");
+    sendSocket(uid, msgstr);
+    sprintf(msgstr, "[Info ] [Server] Please set your username by: <set username [your name]>.\n");
+    sendSocket(uid, msgstr);
+
+    return 0;
+}
+
+int GameHandler::closeConnection(int fid, int type){
+    // find user uid
+    int uid;
+    Player* tp;
+    for(uid = 0; uid < MAX_PLAYERS; ++uid){
+        tp = playerArray[uid];
+        if(tp->fid == fid && tp->connectionType == type){
+            break;
+        }
+    }
+    if(uid == MAX_PLAYERS){
+        return -1;
+    }
+
+    if(tp->joinedGame == -1){
+        delete tp;
+        playerArray[uid] = NULL;
+    } else {
+        gameArray[tp->joinedGame]->playerArray[tp->pid] = PID_PLAYER_QUIT_GAME;
+        delete tp;
+        playerArray[uid] = NULL;
+    }
+
+    return 0;
+}
 
 int GameHandler::recvSocket(int uid, char* data, int len){
 
@@ -83,8 +140,17 @@ int GameHandler::recvSocket(int uid, char* data, int len){
 
 // type is 1 or 2. send(fid, msg)
 int GameHandler::sendSocket(int uid, char* data){
-    int len = strlen(data);
-    _sendSocket(uid, data, len);
+    if(playerArray[uid]->connectionType == 1){
+        int len = strlen(data);
+        socketHandler->sendSocket(playerArray[uid]->fid, data, len);
+        //_sendSocket(uid, data, len);
+        return 0;
+    } else if (playerArray[uid]->connectionType == 2){
+        //int len = strlen(data);
+        webServer->sendWebSocket(playerArray[uid]->fid, data);
+        return 0;
+    }
+     
     return 0;
 }
 
@@ -458,5 +524,26 @@ void* startGame(void* game_ctx){
     // gameArray[tid] = NULL;
 
     printf("[Info ] [Server] Game thread %d exited.\n", ctx->thread_id);
+    return NULL;
+}
+
+int GameHandler::initWebServer(){
+    webServer = new WebServer(this);
+
+    return 0;
+}
+
+int GameHandler::startWebServer(){
+    int rc = pthread_create(&webServer->run_thread, NULL, _startWebServer, (void *)webServer);
+    if (rc) {
+        printf("[Error] \n");
+    }
+
+    return 0;
+}
+
+void* _startWebServer(void* webserver_ctx){
+    WebServer* ctx = (WebServer*)webserver_ctx;
+    ctx->start();
     return NULL;
 }

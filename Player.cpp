@@ -6,6 +6,7 @@
 
 Player::Player(GameHandler* _gameHandler){
     test = 0;
+    connectionType = 0;
     fid = 0;
     uid = 0;
     pid = -1;

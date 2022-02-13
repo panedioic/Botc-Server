@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <./WebServer.h>
+#include <./mongoose/mongoose.h>
 
 WebServer::WebServer(GameHandler* _gameHandler) {
 	gameHandler = _gameHandler;
@@ -11,6 +12,8 @@ WebServer::WebServer(GameHandler* _gameHandler) {
     // const std::string &port
     web_port = new char[8];
     sprintf(web_port, "7001");
+
+	printf("[Debug] [Server] WebServer's address: [%p].\n", this);
 
     init();
 }
@@ -49,7 +52,7 @@ int WebServer::start() {
 	// for both http and websocket
 	mg_set_protocol_http_websocket(connection);
 
-	printf("[Info ] [Server] Starting http server at port: %s\n", m_port.c_str());
+	printf("[Info ] [Server] Starting http server at port: %s\n", web_port);
 	while (1){
         mg_mgr_poll(&m_mgr, 500);
     }
@@ -64,7 +67,8 @@ int WebServer::close() {
 }
 
 void WebServer::ev_handler_func(mg_connection *connection, int event_type, void *event_data) {
-	WebServer* ctx = (WebServer*)connection->mgr->user_data;
+	//printf("[d]xxx\n");
+	WebServer* ctx = (WebServer*)connection->user_data;
     switch (event_type) {
         case MG_EV_HTTP_REQUEST: {
             http_message* http_req = (http_message*)event_data;
@@ -83,7 +87,17 @@ void WebServer::ev_handler_func(mg_connection *connection, int event_type, void 
     return;
 }
 
+void debug(struct mg_connection *nc, struct http_message *hm, struct mg_serve_http_opts opts){
+	printf("[ddddddd\n");
+	mg_serve_http(nc, hm, opts);
+}
+
+void debug2(struct mg_serve_http_opts opts){
+	printf("qqqqqqqqwq\n");
+}
+
 void WebServer::ev_handler_func_http(mg_connection* connection, http_message* http_req) {
+	printf("[debug] http [%p].\n", this);
     // 1. It is only designed for couple of file, so there is no need for router.
     // 2. I thought about load those files in memory for optimization, but just like above, it is not necessary for a demo to do this.
 
@@ -94,7 +108,11 @@ void WebServer::ev_handler_func_http(mg_connection* connection, http_message* ht
 	//std::string body = std::string(http_req->body.p, http_req->body.len);
 
     if (mg_vcmp(&http_req->uri, "/") == 0){ // index page
-        mg_serve_http(connection, http_req, s_server_option);
+		printf("[debug] [%p][%p] %s]\n", connection, http_req, web_dir);
+		//printf("[d][%s]\n", s_server_option.document_root);
+		debug2(s_server_option);
+        debug(connection, http_req, s_server_option);
+		printf("[not there]\n");
 
     } else if (mg_vcmp(&http_req->uri, "/api/hello") == 0) { // test 1
 		// 直接回传
@@ -138,6 +156,7 @@ void WebServer::ev_handler_func_http(mg_connection* connection, http_message* ht
 }
 
 void WebServer::ev_handler_func_ws(mg_connection* connection, int event_type, websocket_message* ws_msg) {
+	printf("[debug] ws\n");
 	int fid = -1;
 	int uid = -1;
 
@@ -178,7 +197,7 @@ void WebServer::ev_handler_func_ws(mg_connection* connection, int event_type, we
 			}
 			// find uid
 			for(uid = 0; uid < MAX_CONNECTION_WEBSOCKET; ++uid){
-				if(gameHandler->playerArray[uid]->fid == fid){
+				if(gameHandler->playerArray[uid]->fid == fid && gameHandler->playerArray[uid]->connectionType == 2){
 					break;
 				}
 			}

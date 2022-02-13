@@ -20,6 +20,7 @@ public:
 	mg_connection* fid_ptr_mappint[MAX_CONNECTION_WEBSOCKET];
 
 	GameHandler* gameHandler;
+	pthread_t run_thread;
 
 	WebServer(GameHandler* _gameHandler);
 	~WebServer();

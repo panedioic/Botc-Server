@@ -104,7 +104,8 @@ void SocketHandler::acceptconn(int lfd, int events, void *arg, void* _ctx) {
         ctx->eventset(&ctx->g_events[i], cfd, recvdata, &ctx->g_events[i]);
         ctx->eventadd(ctx->g_efd, EPOLLIN, &ctx->g_events[i]);
 
-        ctx->newUser(cfd);
+        //ctx->newUser(cfd); // todo
+        ctx->gameHandler->newConnection(cfd, 1);
     } while (0);
     
     printf("[Info ] [Server] new connect [%s:%d][time:%ld], pos[%d]\n", inet_ntoa(c_in.sin_addr), ntohs(c_in.sin_port), ctx->g_events[i].last_active, i);
@@ -142,7 +143,8 @@ void SocketHandler::recvdata(int fd, int events, void* arg, void* _ctx){
         close(ev->fd);
         ctx->eventdel(ctx->g_efd, ev); // ?
         // ev-g_events 地址相减得到偏移元素位置
-        ctx->delUser(ev->fd);
+        //ctx->delUser(ev->fd);
+        ctx->gameHandler->closeConnection(ev->fd, 1);
         printf("[Info ] [Client] [fd=%d] pos[%d], closed\n", fd, (int)(ev - ctx->g_events));
     } else {
         // Error.
@@ -272,6 +274,12 @@ int SocketHandler::newUser(int fid){
 
 int SocketHandler::delUser(int fid){
     gameHandler->delUser(fid);
+    return 0;
+}
+
+int SocketHandler::sendSocket(int fid, char* data, int len){
+    send(fid, data, len, 0);
+
     return 0;
 }
 

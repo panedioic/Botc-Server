@@ -11,6 +11,9 @@ int main(){
     socketHandler.setGameHandler(&gameHandler);
     socketHandler.setPort(7770);
 
+    gameHandler.initWebServer();
+    gameHandler.startWebServer();
+
     socketHandler.run();
 
     return 0;

@@ -50,6 +50,9 @@ class SocketHandler {
     int setPort(int port);
     int run();
 
+    int sendSocket(int fid, char* data, int len);
+    int recvSocket(int fid, char* data, int len);
+    
     private:
 
     void eventset(struct myevent_s *ev, int fd, void (*call_back)(int, int, void*, void* _ctx), void* arg);
@@ -63,8 +66,6 @@ class SocketHandler {
     // 下面是负责与 GameHandler 交互的函数。
     int newUser(int fid);
     int delUser(int fid);
-    int sendSocket(int fid, char* data, int len);
-    int recvSocket(int fid, char* data, int len);
 };
 
 #endif
